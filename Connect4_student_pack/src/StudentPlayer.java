@@ -1,12 +1,14 @@
 import java.util.HashMap;
-import java.util.HashSet;
-
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 public class StudentPlayer extends Player{
 
-    // region 1. Declaration
+    // region 1. Declaration and Constants
+
+    public static final int WINNING_POINTS = Integer.MAX_VALUE - 1;
+    public static final int WEIGHT_1 = 1;
+    public static final int WEIGHT_2 = 3;
+    public static final int WEIGHT_3 = 9;
+    public static final int WEIGHT_OTHER = 20;
 
     private int maxPlayerIndex;
     private int minPlayerIndex;
@@ -19,25 +21,34 @@ public class StudentPlayer extends Player{
     // endregion
 
     // region 2. Constructor
-
     public StudentPlayer(int playerIndex, int[] boardSize, int nToConnect) {
         super(playerIndex, boardSize, nToConnect);
         this.rows = boardSize[0];
         this.cols = boardSize[1];
     }
-
     // endregion
 
     // region 3. Step function
-
     @Override
     public int step(Board board) {
         return alphaBetaSearch(board);
     }
-
     // endregion
 
     // region 4. Alpha Beta algorithm
+    private int payoff(Board board) {
+        int heuristics;
+        if (board.getWinner() == maxPlayerIndex) {
+            heuristics = WINNING_POINTS;
+        } else {
+            heuristics =
+                    evalRows(board.getState(), maxPlayerIndex, minPlayerIndex)
+                    + evalCols(board.getState(), maxPlayerIndex, minPlayerIndex)
+                    + evalDiagonal(board.getState(), maxPlayerIndex, minPlayerIndex)
+                    + evalSkewDiagonal(board.getState(), maxPlayerIndex, minPlayerIndex);
+        }
+        return heuristics;
+    }
 
     private int alphaBetaSearch(Board board) {
         this.minPlayerIndex = board.getLastPlayerIndex();
@@ -48,8 +59,7 @@ public class StudentPlayer extends Player{
         this.transpositionTable = new HashMap<>();
         int depth = 5;
 
-        int v = maxValue(board, Integer.MIN_VALUE, Integer.MAX_VALUE, depth, 0);
-        System.out.println(v);
+        int v = maxValue(board, Integer.MIN_VALUE, Integer.MAX_VALUE, depth);
         int stepColumn = 0;
         for (Integer column : solutionMap.keySet()) {
             if (solutionMap.get(column) == v) {
@@ -59,23 +69,10 @@ public class StudentPlayer extends Player{
         }
         return stepColumn;
     }
-
-    private int payoff(Board board, int depth, int maxi) {
-        int hist;
-        if (board.getWinner() == maxPlayerIndex) {
-            hist = (nToConnect + 1);
-        } else if (board.getWinner() == minPlayerIndex) {
-            hist = -1;
-        } else if (board.getWinner() == 0)   {
-            hist = 0;
-        } else {
-            hist = maxi;
-        }
-        return hist;
-    }
-    private int maxValue(Board board, int alpha, int beta, int depth, int maxi) {
+    
+    private int maxValue(Board board, int alpha, int beta, int depth) {
         if (board.gameEnded() || depth == 0) {
-            return payoff(board, depth, maxi);
+            return payoff(board);
         }
         int minV;
         int v = Integer.MIN_VALUE;
@@ -88,18 +85,7 @@ public class StudentPlayer extends Player{
                 v = transpositionTable.get(strNextBoard);
                 minV = v;
             } else {
-                int histMaxi = Math.max(
-                        Math.max(
-                                nInARow(nextBoard, nextBoard.getLastPlayerRow(), nextBoard.getLastPlayerColumn(), maxPlayerIndex),
-                                nInACol(nextBoard, nextBoard.getLastPlayerRow(), nextBoard.getLastPlayerColumn(), maxPlayerIndex)
-                        ),
-                        Math.max(
-                                nDiagonally(nextBoard, nextBoard.getLastPlayerRow(), nextBoard.getLastPlayerColumn(), maxPlayerIndex),
-                                nSkewDiagonally(nextBoard, nextBoard.getLastPlayerRow(), nextBoard.getLastPlayerColumn(), maxPlayerIndex)
-                        )
-                );
-                maxi = Math.max(maxi, histMaxi);
-                minV = minValue(nextBoard, alpha, beta, depth, maxi);
+                minV = minValue(nextBoard, alpha, beta, depth);
                 v = Math.max(v, minV);
                 transpositionTable.put(strNextBoard,  minV);
             }
@@ -118,9 +104,9 @@ public class StudentPlayer extends Player{
 
     }
 
-    private int minValue(Board board, int alpha, int beta, int depth, int maxi) {
+    private int minValue(Board board, int alpha, int beta, int depth) {
         if (board.gameEnded() || depth == 0) {
-            return payoff(board, depth, maxi);
+            return payoff(board);
         }
         int maxV;
         int v = Integer.MAX_VALUE;
@@ -132,7 +118,7 @@ public class StudentPlayer extends Player{
             if (transpositionTable.containsKey(strNextBoard)) {
                 v = transpositionTable.get(strNextBoard);
             } else {
-                maxV = maxValue(nextBoard, alpha, beta, depth - 1, maxi);
+                maxV = maxValue(nextBoard, alpha, beta, depth - 1);
                 v = Math.min(v, maxV);
                 transpositionTable.put(strNextBoard,  maxV);
             }
@@ -145,98 +131,204 @@ public class StudentPlayer extends Player{
         }
         return v;
     }
-
     // endregion
 
     // region 5. Board
+    private int calcPointByN(int n) {
+        return switch (n) {
+            case 0 -> 0;
+            case 1 -> WEIGHT_1;
+            case 2 -> WEIGHT_2;
+            case 3 -> WEIGHT_3;
+            default -> WEIGHT_OTHER;
+        };
+    }
+    public int evalRows(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
+        int maxPoint = 0;
+        int minPoint = 0;
 
-    private int nInARow(Board board, int row, int col, int playerIndex) {
-        int[][] state = board.getState();
-        int nRow = (state[row][col] == playerIndex ? 1 : 0);
-        int c;
-
-        c = col - 1;
-        while (c >= 0 && state[row][c] == playerIndex) {
-            nRow++;
-            c--;
+        for (int r = 0; r < rows; r++) {
+            int nMax = 0;
+            int nMin = 0;
+            for(int c = 0; c < cols; c++) {
+                if (state[r][c] == maxPlayerIndex) {
+                    nMax++;
+                    minPoint += calcPointByN(nMin);
+                    nMin = 0;
+                } else if (state[r][c] == minPlayerIndex) {
+                    nMin++;
+                    maxPoint += calcPointByN(nMax);
+                    nMax = 0;
+                } else {
+                    maxPoint += calcPointByN(nMax);
+                    minPoint += calcPointByN(nMin);
+                    nMax = 0;
+                    nMin = 0;
+                }
+            }
+            maxPoint += calcPointByN(nMax);
+            minPoint += calcPointByN(nMin);
         }
 
-        c = col + 1;
-        while (c < cols && state[row][c] == playerIndex) {
-            nRow++;
-            c++;
-        }
-
-        return nRow;
+        return maxPoint - minPoint;
     }
 
-    private int nInACol(Board board, int row, int col, int playerIndex) {
-        int[][] state = board.getState();
-        int nCol = (state[row][col] == playerIndex ? 1 : 0);
-        int r;
+    public int evalCols(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
+        int maxPoint = 0;
+        int minPoint = 0;
 
-        r = row - 1;
-        while (r >= 0 && state[r][col] == playerIndex) {
-            nCol++;
-            r--;
+        for(int c = 0; c < cols; c++) {
+            int nMax = 0;
+            int nMin = 0;
+            for (int r = 0; r < rows; r++) {
+                if (state[r][c] == maxPlayerIndex) {
+                    nMax++;
+                    minPoint += calcPointByN(nMin);
+                    nMin = 0;
+                } else if (state[r][c] == minPlayerIndex) {
+                    nMin++;
+                    maxPoint += calcPointByN(nMax);
+                    nMax = 0;
+                } else {
+                    maxPoint += calcPointByN(nMax);
+                    minPoint += calcPointByN(nMin);
+                    nMax = 0;
+                    nMin = 0;
+                }
+            }
+            maxPoint += calcPointByN(nMax);
+            minPoint += calcPointByN(nMin);
         }
 
-        r = row + 1;
-        while (r < rows && state[r][col] == playerIndex) {
-            nCol++;
-            r++;
-        }
-
-        return nCol;
+        return maxPoint - minPoint;
     }
 
-    private int nDiagonally(Board board, int row, int col, int playerIndex) {
-        int[][] state = board.getState();
-        int nDiag = (state[row][col] == playerIndex ? 1 : 0);
-        int r, c;
+    public int evalDiagonal(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
+        int maxPoint = 0;
+        int minPoint = 0;
 
-        r = row - 1;
-        c = col - 1;
-        while (r >= 0 && c >= 0 && state[r][c] == playerIndex) {
-             nDiag++;
-             r--;
-             c--;
+        for (int row = rows - 1; row >= 0; row--) {
+            int nMax = 0;
+            int nMin = 0;
+
+            int c = 0;
+            int r = row;
+            while (r < rows && c < cols) {
+                if (state[r][c] == maxPlayerIndex) {
+                    nMax++;
+                    minPoint += calcPointByN(nMin);
+                    nMin = 0;
+                } else if (state[r][c] == minPlayerIndex) {
+                    nMin++;
+                    maxPoint += calcPointByN(nMax);
+                    nMax = 0;
+                } else {
+                    maxPoint += calcPointByN(nMax);
+                    minPoint += calcPointByN(nMin);
+                    nMax = 0;
+                    nMin = 0;
+                }
+                r++;
+                c++;
+            }
+            maxPoint += calcPointByN(nMax);
+            minPoint += calcPointByN(nMin);
         }
 
-        r = row + 1;
-        c = col + 1;
-        while (r < rows && c < cols && state[r][c] == playerIndex) {
-            nDiag++;
-            r++;
-            c++;
+        for (int col = 1; col < cols; col++) {
+            int nMax = 0;
+            int nMin = 0;
+
+            int r = 0;
+            int c = col;
+            while (r < rows && c < cols) {
+                if (state[r][c] == maxPlayerIndex) {
+                    nMax++;
+                    minPoint += calcPointByN(nMin);
+                    nMin = 0;
+                } else if (state[r][c] == minPlayerIndex) {
+                    nMin++;
+                    maxPoint += calcPointByN(nMax);
+                    nMax = 0;
+                } else {
+                    maxPoint += calcPointByN(nMax);
+                    minPoint += calcPointByN(nMin);
+                    nMax = 0;
+                    nMin = 0;
+                }
+                r++;
+                c++;
+            }
+            maxPoint += calcPointByN(nMax);
+            minPoint += calcPointByN(nMin);
         }
 
-        return nDiag;
+
+        return maxPoint - minPoint;
     }
 
-    private int nSkewDiagonally(Board board, int row, int col, int playerIndex) {
-        int[][] state = board.getState();
-        int nSkewDiag = (state[row][col] == playerIndex ? 1 : 0);
-        int r, c;
+    public int evalSkewDiagonal(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
+        int maxPoint = 0;
+        int minPoint = 0;
 
-        r = row - 1;
-        c = col + 1;
-        while (r >= 0 && c < cols && state[r][c] == playerIndex) {
-            nSkewDiag++;
-            r--;
-            c++;
+        for (int row = rows - 1; row >= 0; row--) {
+            int nMax = 0;
+            int nMin = 0;
+
+            int r = row;
+            int c = cols - 1;
+            while (r < rows && c >= 0) {
+                if (state[r][c] == maxPlayerIndex) {
+                    nMax++;
+                    minPoint += calcPointByN(nMin);
+                    nMin = 0;
+                } else if (state[r][c] == minPlayerIndex) {
+                    nMin++;
+                    maxPoint += calcPointByN(nMax);
+                    nMax = 0;
+                } else {
+                    maxPoint += calcPointByN(nMax);
+                    minPoint += calcPointByN(nMin);
+                    nMax = 0;
+                    nMin = 0;
+                }
+                r++;
+                c--;
+            }
+            maxPoint += calcPointByN(nMax);
+            minPoint += calcPointByN(nMin);
         }
 
-        r = row + 1;
-        c = col - 1;
-        while (r < rows && c >= 0 && state[r][c] == playerIndex) {
-            nSkewDiag++;
-            r++;
-            c--;
+        for (int col = cols - 2; col >= 0; col--) {
+            int nMax = 0;
+            int nMin = 0;
+
+            int r = 0;
+            int c = col;
+            while (r < rows && c >= 0) {
+                if (state[r][c] == maxPlayerIndex) {
+                    nMax++;
+                    minPoint += calcPointByN(nMin);
+                    nMin = 0;
+                } else if (state[r][c] == minPlayerIndex) {
+                    nMin++;
+                    maxPoint += calcPointByN(nMax);
+                    nMax = 0;
+                } else {
+                    maxPoint += calcPointByN(nMax);
+                    minPoint += calcPointByN(nMin);
+                    nMax = 0;
+                    nMin = 0;
+                }
+                r++;
+                c--;
+            }
+            maxPoint += calcPointByN(nMax);
+            minPoint += calcPointByN(nMin);
         }
 
 
-        return nSkewDiag;
+        return maxPoint - minPoint;
     }
 
     private String boardToString(Board board) {
@@ -251,8 +343,5 @@ public class StudentPlayer extends Player{
         }
         return str;
     }
-
-
     // endregion
-
 }
