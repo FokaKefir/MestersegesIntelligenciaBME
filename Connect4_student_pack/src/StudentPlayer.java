@@ -2,14 +2,6 @@ import java.util.HashMap;
 
 public class StudentPlayer extends Player{
 
-    // region 1. Declaration and Constants
-
-    public static final int WINNING_POINTS = Integer.MAX_VALUE - 1;
-    public static final int WEIGHT_1 = 1;
-    public static final int WEIGHT_2 = 3;
-    public static final int WEIGHT_3 = 9;
-    public static final int WEIGHT_OTHER = 20;
-
     private int maxPlayerIndex;
     private int minPlayerIndex;
     private Board actualBoard;
@@ -18,38 +10,28 @@ public class StudentPlayer extends Player{
     private int rows;
     private int cols;
 
-    // endregion
-
-    // region 2. Constructor
     public StudentPlayer(int playerIndex, int[] boardSize, int nToConnect) {
         super(playerIndex, boardSize, nToConnect);
         this.rows = boardSize[0];
         this.cols = boardSize[1];
     }
-    // endregion
 
-    // region 3. Step function
     @Override
     public int step(Board board) {
         return alphaBetaSearch(board);
     }
-    // endregion
 
-    // region 4. Alpha Beta algorithm
-    private int payoff(Board board) {
-        int heuristics;
+    private int payoff(Board board, int depth) {
         if (board.getWinner() == maxPlayerIndex) {
-            heuristics = WINNING_POINTS;
+            return 10000 * (depth + 1);
+        } else if (board.getWinner() == minPlayerIndex) {
+            return -10000 * (depth + 1);
         } else {
-            heuristics =
-                    evalRows(board.getState(), maxPlayerIndex, minPlayerIndex)
-                    + evalCols(board.getState(), maxPlayerIndex, minPlayerIndex)
-                    + evalDiagonal(board.getState(), maxPlayerIndex, minPlayerIndex)
-                    + evalSkewDiagonal(board.getState(), maxPlayerIndex, minPlayerIndex);
+            int[][] s = board.getState();
+            int m1 = maxPlayerIndex, m2 = minPlayerIndex;
+            return evalRows(s, m1, m2) + evalCols(s, m1, m2) + evalDiagonal(s, m1, m2) + evalSkewDiagonal(s, m1, m2);
         }
-        return heuristics;
     }
-
     private int alphaBetaSearch(Board board) {
         this.minPlayerIndex = board.getLastPlayerIndex();
         this.maxPlayerIndex = this.playerIndex;
@@ -60,6 +42,7 @@ public class StudentPlayer extends Player{
         int depth = 5;
 
         int v = maxValue(board, Integer.MIN_VALUE, Integer.MAX_VALUE, depth);
+        System.out.println(v);
         int stepColumn = 0;
         for (Integer column : solutionMap.keySet()) {
             if (solutionMap.get(column) == v) {
@@ -69,10 +52,9 @@ public class StudentPlayer extends Player{
         }
         return stepColumn;
     }
-    
     private int maxValue(Board board, int alpha, int beta, int depth) {
         if (board.gameEnded() || depth == 0) {
-            return payoff(board);
+            return payoff(board, depth);
         }
         int minV;
         int v = Integer.MIN_VALUE;
@@ -103,10 +85,9 @@ public class StudentPlayer extends Player{
         return v;
 
     }
-
     private int minValue(Board board, int alpha, int beta, int depth) {
         if (board.gameEnded() || depth == 0) {
-            return payoff(board);
+            return payoff(board, depth);
         }
         int maxV;
         int v = Integer.MAX_VALUE;
@@ -137,16 +118,15 @@ public class StudentPlayer extends Player{
     private int calcPointByN(int n) {
         return switch (n) {
             case 0 -> 0;
-            case 1 -> WEIGHT_1;
-            case 2 -> WEIGHT_2;
-            case 3 -> WEIGHT_3;
-            default -> WEIGHT_OTHER;
+            case 1 -> 1;
+            case 2 -> 3;
+            case 3 -> 9;
+            default -> 20;
         };
     }
     public int evalRows(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
         int maxPoint = 0;
         int minPoint = 0;
-
         for (int r = 0; r < rows; r++) {
             int nMax = 0;
             int nMin = 0;
@@ -169,14 +149,11 @@ public class StudentPlayer extends Player{
             maxPoint += calcPointByN(nMax);
             minPoint += calcPointByN(nMin);
         }
-
         return maxPoint - minPoint;
     }
-
     public int evalCols(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
         int maxPoint = 0;
         int minPoint = 0;
-
         for(int c = 0; c < cols; c++) {
             int nMax = 0;
             int nMin = 0;
@@ -199,14 +176,11 @@ public class StudentPlayer extends Player{
             maxPoint += calcPointByN(nMax);
             minPoint += calcPointByN(nMin);
         }
-
         return maxPoint - minPoint;
     }
-
     public int evalDiagonal(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
         int maxPoint = 0;
         int minPoint = 0;
-
         for (int row = rows - 1; row >= 0; row--) {
             int nMax = 0;
             int nMin = 0;
@@ -234,7 +208,6 @@ public class StudentPlayer extends Player{
             maxPoint += calcPointByN(nMax);
             minPoint += calcPointByN(nMin);
         }
-
         for (int col = 1; col < cols; col++) {
             int nMax = 0;
             int nMin = 0;
@@ -266,15 +239,13 @@ public class StudentPlayer extends Player{
 
         return maxPoint - minPoint;
     }
-
     public int evalSkewDiagonal(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
         int maxPoint = 0;
         int minPoint = 0;
-
         for (int row = rows - 1; row >= 0; row--) {
             int nMax = 0;
             int nMin = 0;
-
+            int prevLoc = 0;
             int r = row;
             int c = cols - 1;
             while (r < rows && c >= 0) {
@@ -326,15 +297,11 @@ public class StudentPlayer extends Player{
             maxPoint += calcPointByN(nMax);
             minPoint += calcPointByN(nMin);
         }
-
-
         return maxPoint - minPoint;
     }
 
     private String boardToString(Board board) {
         String str = "";
-        int rows = boardSize[0];
-        int cols = boardSize[1];
         int[][] b = board.getState();
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -343,5 +310,4 @@ public class StudentPlayer extends Player{
         }
         return str;
     }
-    // endregion
 }

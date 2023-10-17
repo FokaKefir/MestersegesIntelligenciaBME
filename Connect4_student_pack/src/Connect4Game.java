@@ -8,6 +8,7 @@ public class Connect4Game {
         Player[] players = new Player[2];
 
         // Player 1
+        //players[0] = new StudentPlayer(1, boardSize, nToConnect);
         players[0] = new HumanPlayer(1, boardSize, nToConnect, view);
 
         // Player 2
