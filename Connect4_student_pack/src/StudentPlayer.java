@@ -23,15 +23,18 @@ public class StudentPlayer extends Player{
 
     private int payoff(Board board, int depth) {
         if (board.getWinner() == maxPlayerIndex) {
-            return 10000 * (depth + 1);
+            return 10000;
         } else if (board.getWinner() == minPlayerIndex) {
-            return -10000 * (depth + 1);
+            return -10000;
         } else {
             int[][] s = board.getState();
-            int m1 = maxPlayerIndex, m2 = minPlayerIndex;
-            return evalRows(s, m1, m2) + evalCols(s, m1, m2) + evalDiagonal(s, m1, m2) + evalSkewDiagonal(s, m1, m2);
+            return evalRows(s)
+                    + evalCols(s)
+                    + evalDiagonal(s)
+                    + evalSkewDiagonal(s);
         }
     }
+
     private int alphaBetaSearch(Board board) {
         this.minPlayerIndex = board.getLastPlayerIndex();
         this.maxPlayerIndex = this.playerIndex;
@@ -52,6 +55,7 @@ public class StudentPlayer extends Player{
         }
         return stepColumn;
     }
+
     private int maxValue(Board board, int alpha, int beta, int depth) {
         if (board.gameEnded() || depth == 0) {
             return payoff(board, depth);
@@ -85,6 +89,7 @@ public class StudentPlayer extends Player{
         return v;
 
     }
+
     private int minValue(Board board, int alpha, int beta, int depth) {
         if (board.gameEnded() || depth == 0) {
             return payoff(board, depth);
@@ -112,191 +117,98 @@ public class StudentPlayer extends Player{
         }
         return v;
     }
-    // endregion
 
-    // region 5. Board
-    private int calcPointByN(int n) {
+    private int calcPointByN(int n, int prevLoc, int nextLoc) {
         return switch (n) {
             case 0 -> 0;
-            case 1 -> 1;
-            case 2 -> 3;
-            case 3 -> 9;
-            default -> 20;
+            case 1 -> 1 + prevLoc + nextLoc;
+            case 2 -> 3 + prevLoc + nextLoc;
+            case 3 -> 9 + prevLoc + nextLoc;
+            default -> 20 + prevLoc + nextLoc;
         };
     }
-    public int evalRows(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
-        int maxPoint = 0;
-        int minPoint = 0;
-        for (int r = 0; r < rows; r++) {
-            int nMax = 0;
-            int nMin = 0;
-            for(int c = 0; c < cols; c++) {
-                if (state[r][c] == maxPlayerIndex) {
-                    nMax++;
-                    minPoint += calcPointByN(nMin);
-                    nMin = 0;
-                } else if (state[r][c] == minPlayerIndex) {
-                    nMin++;
-                    maxPoint += calcPointByN(nMax);
-                    nMax = 0;
-                } else {
-                    maxPoint += calcPointByN(nMax);
-                    minPoint += calcPointByN(nMin);
-                    nMax = 0;
-                    nMin = 0;
-                }
-            }
-            maxPoint += calcPointByN(nMax);
-            minPoint += calcPointByN(nMin);
-        }
-        return maxPoint - minPoint;
-    }
-    public int evalCols(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
-        int maxPoint = 0;
-        int minPoint = 0;
-        for(int c = 0; c < cols; c++) {
-            int nMax = 0;
-            int nMin = 0;
-            for (int r = 0; r < rows; r++) {
-                if (state[r][c] == maxPlayerIndex) {
-                    nMax++;
-                    minPoint += calcPointByN(nMin);
-                    nMin = 0;
-                } else if (state[r][c] == minPlayerIndex) {
-                    nMin++;
-                    maxPoint += calcPointByN(nMax);
-                    nMax = 0;
-                } else {
-                    maxPoint += calcPointByN(nMax);
-                    minPoint += calcPointByN(nMin);
-                    nMax = 0;
-                    nMin = 0;
-                }
-            }
-            maxPoint += calcPointByN(nMax);
-            minPoint += calcPointByN(nMin);
-        }
-        return maxPoint - minPoint;
-    }
-    public int evalDiagonal(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
-        int maxPoint = 0;
-        int minPoint = 0;
-        for (int row = rows - 1; row >= 0; row--) {
-            int nMax = 0;
-            int nMin = 0;
 
+    public int evalRows(int[][] state) {
+        int point = 0;
+        for (int r = 0; r < rows; r++) {
+            int c = 0;
+            point += evalDirection(state, r, c, 0, 1);
+        }
+        return point;
+    }
+
+    public int evalCols(int[][] state) {
+        int point = 0;
+        for(int c = 0; c < cols; c++) {
+            int r = 0;
+            point += evalDirection(state, r, c, 1, 0);
+        }
+        return point;
+    }
+
+    public int evalDiagonal(int[][] state) {
+        int point = 0;
+        for (int row = rows - 1; row >= 0; row--) {
             int c = 0;
             int r = row;
-            while (r < rows && c < cols) {
-                if (state[r][c] == maxPlayerIndex) {
-                    nMax++;
-                    minPoint += calcPointByN(nMin);
-                    nMin = 0;
-                } else if (state[r][c] == minPlayerIndex) {
-                    nMin++;
-                    maxPoint += calcPointByN(nMax);
-                    nMax = 0;
-                } else {
-                    maxPoint += calcPointByN(nMax);
-                    minPoint += calcPointByN(nMin);
-                    nMax = 0;
-                    nMin = 0;
-                }
-                r++;
-                c++;
-            }
-            maxPoint += calcPointByN(nMax);
-            minPoint += calcPointByN(nMin);
+            point += evalDirection(state, r, c, 1, 1);
         }
-        for (int col = 1; col < cols; col++) {
-            int nMax = 0;
-            int nMin = 0;
 
+        for (int col = 1; col < cols; col++) {
             int r = 0;
             int c = col;
-            while (r < rows && c < cols) {
-                if (state[r][c] == maxPlayerIndex) {
-                    nMax++;
-                    minPoint += calcPointByN(nMin);
-                    nMin = 0;
-                } else if (state[r][c] == minPlayerIndex) {
-                    nMin++;
-                    maxPoint += calcPointByN(nMax);
-                    nMax = 0;
-                } else {
-                    maxPoint += calcPointByN(nMax);
-                    minPoint += calcPointByN(nMin);
-                    nMax = 0;
-                    nMin = 0;
-                }
-                r++;
-                c++;
-            }
-            maxPoint += calcPointByN(nMax);
-            minPoint += calcPointByN(nMin);
+            point += evalDirection(state, r, c, 1, 1);
         }
 
-
-        return maxPoint - minPoint;
+        return point;
     }
-    public int evalSkewDiagonal(int[][] state, int maxPlayerIndex, int minPlayerIndex) {
-        int maxPoint = 0;
-        int minPoint = 0;
+
+    public int evalSkewDiagonal(int[][] state) {
+        int point = 0;
         for (int row = rows - 1; row >= 0; row--) {
-            int nMax = 0;
-            int nMin = 0;
-            int prevLoc = 0;
             int r = row;
             int c = cols - 1;
-            while (r < rows && c >= 0) {
-                if (state[r][c] == maxPlayerIndex) {
-                    nMax++;
-                    minPoint += calcPointByN(nMin);
-                    nMin = 0;
-                } else if (state[r][c] == minPlayerIndex) {
-                    nMin++;
-                    maxPoint += calcPointByN(nMax);
-                    nMax = 0;
-                } else {
-                    maxPoint += calcPointByN(nMax);
-                    minPoint += calcPointByN(nMin);
-                    nMax = 0;
-                    nMin = 0;
-                }
-                r++;
-                c--;
-            }
-            maxPoint += calcPointByN(nMax);
-            minPoint += calcPointByN(nMin);
+            point += evalDirection(state, r, c, 1, -1);
         }
 
         for (int col = cols - 2; col >= 0; col--) {
-            int nMax = 0;
-            int nMin = 0;
-
             int r = 0;
             int c = col;
-            while (r < rows && c >= 0) {
-                if (state[r][c] == maxPlayerIndex) {
-                    nMax++;
-                    minPoint += calcPointByN(nMin);
-                    nMin = 0;
-                } else if (state[r][c] == minPlayerIndex) {
-                    nMin++;
-                    maxPoint += calcPointByN(nMax);
-                    nMax = 0;
-                } else {
-                    maxPoint += calcPointByN(nMax);
-                    minPoint += calcPointByN(nMin);
-                    nMax = 0;
-                    nMin = 0;
-                }
-                r++;
-                c--;
-            }
-            maxPoint += calcPointByN(nMax);
-            minPoint += calcPointByN(nMin);
+            point += evalDirection(state, r, c, 1, -1);
         }
+        return point;
+    }
+
+    private int evalDirection(int[][] state, int r, int c, int rowStep, int colStep) {
+        int nMax = 0;
+        int nMin = 0;
+        int maxPoint = 0;
+        int minPoint = 0;
+        int prevLoc = 0;
+        while (r < rows && c < cols && r >= 0 && c >= 0) {
+            if (state[r][c] == maxPlayerIndex) {
+                nMax++;
+                minPoint += calcPointByN(nMin, prevLoc, 0);
+                nMin = 0;
+                prevLoc = 0;
+            } else if (state[r][c] == minPlayerIndex) {
+                nMin++;
+                maxPoint += calcPointByN(nMax, prevLoc, 0);
+                nMax = 0;
+                prevLoc = 0;
+            } else {
+                maxPoint += calcPointByN(nMax, prevLoc, 1);
+                minPoint += calcPointByN(nMin, prevLoc, 1);
+                nMax = 0;
+                nMin = 0;
+                prevLoc += 1;
+            }
+            r += rowStep;
+            c += colStep;
+        }
+        maxPoint += calcPointByN(nMax, prevLoc, 0);
+        minPoint += calcPointByN(nMin, prevLoc, 0);
+
         return maxPoint - minPoint;
     }
 

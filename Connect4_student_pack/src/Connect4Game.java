@@ -38,30 +38,6 @@ public class Connect4Game {
         }
     }
 
-    private static void test() {
-        final int[] boardSize = new int[] {6, 7};
-        final int nToConnect = 4;
-        View view = new ConsoleView(boardSize);
-
-        Board board = new Board(boardSize, nToConnect);
-        board.step(2, 0);
-        board.step(1, 1);
-        board.step(1, 2);
-        board.step(2, 0);
-        board.step(1, 1);
-        board.step(1, 0);
-        //board.step(2, 6);
-        view.drawBoard(board);
-
-        StudentPlayer player = new StudentPlayer(1, boardSize, 4);
-
-        System.out.println("Rows points " + player.evalRows(board.getState(), 1, 2));
-        System.out.println("Cols points " + player.evalCols(board.getState(), 1, 2));
-        System.out.println("Diagonal points " + player.evalDiagonal(board.getState(), 1, 2));
-        System.out.println("Skew diagonal points " + player.evalSkewDiagonal(board.getState(), 1, 2));
-
-    }
-
     public static void main(String[] args) {
         game();
         //test();
