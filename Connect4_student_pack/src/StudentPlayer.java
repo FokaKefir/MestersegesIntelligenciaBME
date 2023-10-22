@@ -16,14 +16,14 @@ public class StudentPlayer extends Player{
     private int rows;
     private int cols;
     private final int[][] densityMatrix = {
-        {3, 4, 5, 7, 5, 4, 3},
-        {4, 6, 8, 10, 8, 6, 4},
-        {5, 8, 11, 13, 11, 8, 5},
-        {5, 8, 11, 13, 11, 8, 5},
-        {4, 6, 8, 10, 8, 6, 4},
-        {3, 4, 5, 7, 5, 4, 3}
+        {2, 4, 5, 7, 5, 4, 2},
+        {3, 6, 8, 10, 8, 6, 3},
+        {3, 7, 11, 15, 11, 7, 3},
+        {4, 7, 12, 15, 12, 7, 4},
+        {4, 8, 12, 15, 12, 8, 4},
+        {4, 8, 12, 13, 12, 8, 4}
     };
-    private int depth;
+    private int depth = 4;
 
     // endregion
 
@@ -32,7 +32,7 @@ public class StudentPlayer extends Player{
         super(playerIndex, boardSize, nToConnect);
         this.rows = boardSize[0];
         this.cols = boardSize[1];
-        this.depth = new Random().nextBoolean() ? 4 : 5;
+        //this.depth = new Random().nextBoolean() ? 4 : 5;
     }
     // endregion
 
@@ -56,9 +56,9 @@ public class StudentPlayer extends Player{
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     if (state[r][c] == maxPlayerIndex) {
-                        heuristics += 2 * densityMatrix[r][c];
+                        heuristics += 4 * densityMatrix[r][c];
                     } else if (state[r][c] == minPlayerIndex) {
-                        heuristics += -2 * densityMatrix[r][c];
+                        heuristics += -4 * densityMatrix[r][c];
                     } else {
                         heuristics += 0 * densityMatrix[r][c];
                     }
