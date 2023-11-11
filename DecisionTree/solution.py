@@ -63,15 +63,67 @@ def get_best_separation(features: list, labels: list) -> (int, int):
     return best_separation_feature, best_separation_value
 
 ################### 3. feladat, döntési fa implementációja ####################
-def main():
-    #TODO: implementálja a döntési fa tanulását!
-    data = np.loadtxt("train.csv", delimiter=',', dtype=np.int32)
-    test_data = np.loadtxt("test.csv", delimiter=',', dtype=np.int32)
+
+class DecisionTree:
+    feature: int
+    treshold: int
+    lessNode = None
+    greaterNode = None
+    def __init__(self, feature: int, treshold: int):
+        self.feature = feature
+        self.treshold = treshold
+
+
+def build_tree(features: np.ndarray, labels: np.ndarray) -> DecisionTree:
+    feature, sep_val = get_best_separation(features, labels)
+    tree = DecisionTree(feature, sep_val)
+
+    features_by_column = features[:, feature]
+
+    features_less = features[features_by_column <= sep_val, :]
+    labels_less = labels[features_by_column <= sep_val]
+    if np.all(labels_less == 1):
+        tree.lessNode = 1
+    elif np.all(labels_less == 0):
+        tree.lessNode = 0
+    else:
+        tree.lessNode = build_tree(np.delete(features_less, feature, axis=1), labels_less)
+
+    features_greater = features[features_by_column > sep_val, :]
+    labels_greater = labels[features_by_column > sep_val]
+    if np.all(labels_less == 1):
+        tree.greaterNode = 1
+    elif np.all(labels_greater == 0):
+        tree.greaterNode = 0
+    else:
+        tree.greaterNode = build_tree(np.delete(features_greater, feature, axis=1), labels_greater)
     
+    return tree
+
+def predict(tree: DecisionTree, sample: np.ndarray) -> int:
+    f = tree.feature
+    if sample[f] <= tree.treshold:
+        node = tree.lessNode
+    else:
+        node = tree.greaterNode
+
+    if type(node) == int:
+        return node
+    
+    return predict(node, np.delete(sample, f))
+
+def main():
+    data = np.loadtxt("train.csv", delimiter=',', dtype=np.int32)
     features = data[:, :-1]
     labels = data[:, -1]
 
-    
+    tree = build_tree(features, labels)
+
+    with open("results.csv", "w") as fout:
+        test_data = np.loadtxt("test.csv", delimiter=',', dtype=np.int32)
+        for sample in test_data:
+            pred = predict(tree, sample)
+            print(pred, file=fout)
     
     return 0
 
