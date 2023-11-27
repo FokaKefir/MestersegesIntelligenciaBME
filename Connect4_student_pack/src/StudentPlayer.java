@@ -12,18 +12,17 @@ public class StudentPlayer extends Player{
     private int minPlayerIndex;
     private Board actualBoard;
     private HashMap<Integer, Integer> solutionMap;
-    private HashMap<String, Integer> transpositionTable;
     private int rows;
     private int cols;
     private final int[][] densityMatrix = {
-        {2, 4, 5, 7, 5, 4, 2},
-        {3, 6, 8, 10, 8, 6, 3},
-        {3, 7, 11, 15, 11, 7, 3},
-        {4, 7, 12, 15, 12, 7, 4},
-        {4, 8, 12, 15, 12, 8, 4},
-        {4, 8, 12, 13, 12, 8, 4}
+            {3, 4, 5, 7, 5, 4, 3},
+            {4, 6, 8, 10, 8, 6, 4},
+            {5, 8, 11, 13, 11, 8, 5},
+            {5, 8, 11, 13, 11, 8, 5},
+            {4, 6, 8, 10, 8, 6, 4},
+            {3, 4, 5, 7, 5, 4, 3}
     };
-    private int depth = 4;
+    private int depth = 8;
 
     // endregion
 
@@ -46,21 +45,23 @@ public class StudentPlayer extends Player{
     // region 4. Alpha Beta algorithm
     private int payoff(Board board) {
         int heuristics;
-        if (board.getWinner() == maxPlayerIndex) {
-            heuristics = WINNING_POINTS;
-        } else if (board.getWinner() == minPlayerIndex) {
-            heuristics = LOSING_POINTS;
+        if (board.gameEnded()) {
+            if (board.getWinner() == maxPlayerIndex) {
+                heuristics = WINNING_POINTS;
+            } else if (board.getWinner() == minPlayerIndex) {
+                heuristics = LOSING_POINTS;
+            } else {
+                heuristics = 0;
+            }
         } else {
             heuristics = 0;
             int[][] state = board.getState();
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     if (state[r][c] == maxPlayerIndex) {
-                        heuristics += 4 * densityMatrix[r][c];
+                        heuristics += densityMatrix[r][c];
                     } else if (state[r][c] == minPlayerIndex) {
-                        heuristics += -4 * densityMatrix[r][c];
-                    } else {
-                        heuristics += 0 * densityMatrix[r][c];
+                        heuristics += -densityMatrix[r][c];
                     }
                 }
             }
@@ -76,8 +77,6 @@ public class StudentPlayer extends Player{
 
         this.actualBoard = board;
         this.solutionMap = new HashMap<>();
-        this.transpositionTable = new HashMap<>();
-
 
         int v = maxValue(board, Integer.MIN_VALUE, Integer.MAX_VALUE, depth);
         int stepColumn = 0;
@@ -99,17 +98,8 @@ public class StudentPlayer extends Player{
         for (Integer column : board.getValidSteps()) {
             Board nextBoard = new Board(board);
             nextBoard.step(maxPlayerIndex, column);
-
-            String strNextBoard = boardToString(nextBoard);
-            if (transpositionTable.containsKey(strNextBoard)) {
-                v = transpositionTable.get(strNextBoard);
-                minV = v;
-            } else {
-                minV = minValue(nextBoard, alpha, beta, depth);
-                v = Math.max(v, minV);
-                transpositionTable.put(strNextBoard,  minV);
-            }
-
+            minV = minValue(nextBoard, alpha, beta, depth);
+            v = Math.max(v, minV);
             if (board.equals(actualBoard)) {
                 solutionMap.put(column, minV);
             }
@@ -133,16 +123,8 @@ public class StudentPlayer extends Player{
         for (Integer column : board.getValidSteps()) {
             Board nextBoard = new Board(board);
             nextBoard.step(minPlayerIndex, column);
-
-            String strNextBoard = boardToString(nextBoard);
-            if (transpositionTable.containsKey(strNextBoard)) {
-                v = transpositionTable.get(strNextBoard);
-            } else {
-                maxV = maxValue(nextBoard, alpha, beta, depth - 1);
-                v = Math.min(v, maxV);
-                transpositionTable.put(strNextBoard,  maxV);
-            }
-
+            maxV = maxValue(nextBoard, alpha, beta, depth - 1);
+            v = Math.min(v, maxV);
             if (v <= alpha) {
                 return v;
             }
@@ -153,20 +135,5 @@ public class StudentPlayer extends Player{
     }
     // endregion
 
-    // region 5. Board
 
-    private String boardToString(Board board) {
-        String str = "";
-        int rows = boardSize[0];
-        int cols = boardSize[1];
-        int[][] b = board.getState();
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                str += String.valueOf(b[i][j]);
-            }
-        }
-        return str;
-    }
-
-    // endregion
 }
